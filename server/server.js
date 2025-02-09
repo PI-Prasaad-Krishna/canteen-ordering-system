@@ -34,15 +34,20 @@ mongoose.connect(process.env.MONGO_URI, {
 const authenticate = (req, res, next) => {
   const token = req.header('Authorization');
   if (!token) {
+    console.log("No token provided");  // Debugging log
     return res.status(401).json({ message: 'Authorization required' });
   }
 
+  // Split the token to remove the 'Bearer' part
   try {
     const secretKey = process.env.JWT_SECRET_KEY;
-    const decoded = jwt.verify(token, secretKey);
+    const tokenValue = token.split(' ')[1];  // Extract token part after 'Bearer'
+    console.log("Token from Authorization Header:", tokenValue);  // Debugging log
+    const decoded = jwt.verify(tokenValue, secretKey);
     req.user = decoded;  // Attach the decoded user info to the request object
     next();
   } catch (error) {
+    console.error("Token verification error:", error);  // Debugging log
     return res.status(401).json({ message: 'Invalid token' });
   }
 };
@@ -102,6 +107,7 @@ app.post('/login', async (req, res) => {
     // Generate JWT token with the secret key
     const token = jwt.sign({ userId: user._id }, secretKey, { expiresIn: '1h' });
 
+    console.log("Generated Token:", token);  // Debugging log
     res.status(200).json({ token });
   } catch (error) {
     console.error(error); // Log error for debugging purposes
