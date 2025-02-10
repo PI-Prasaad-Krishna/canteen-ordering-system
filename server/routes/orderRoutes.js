@@ -2,9 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Order = require('../models/Order'); // Import Order model
 const Menu = require('../models/Menu'); // Import Menu model
-const crypto = require('crypto'); // For OTP generation
-const authenticate = require('../middleware/authenticate'); // Authentication middleware
 const otpGenerator = require('otp-generator'); // OTP generator
+const authenticate = require('../middleware/authenticate'); // Authentication middleware
 
 const router = express.Router();
 
@@ -14,47 +13,45 @@ router.post('/order', authenticate, async (req, res) => {
   const studentId = req.user.userId; // Extract student ID from JWT
 
   try {
-    // ✅ Validate food IDs before querying MongoDB
-    const foodIds = items.map(item => item.foodId);
-    const validFoodIds = foodIds.filter(id => mongoose.Types.ObjectId.isValid(id)); // Only keep valid IDs
+    // ✅ Validate `_id` before querying MongoDB
+    const menuIds = items.map(item => item._id);
+    const validMenuIds = menuIds.filter(id => mongoose.Types.ObjectId.isValid(id)); // Keep only valid IDs
 
-    if (validFoodIds.length === 0) {
-      return res.status(400).json({ message: 'Invalid food IDs provided' });
+    if (validMenuIds.length === 0) {
+      return res.status(400).json({ message: 'Invalid menu item IDs provided' });
     }
 
-    // ✅ Fetch valid menu items
-    const menuItems = await Menu.find({ _id: { $in: validFoodIds } });
+    // ✅ Fetch menu items using _id and get price, counterId
+    const menuItems = await Menu.find({ _id: { $in: validMenuIds } });
 
     if (menuItems.length === 0) {
       return res.status(404).json({ message: 'No valid menu items found' });
     }
 
-    // ✅ Group items by counterId
-    const counterMap = {};
-    menuItems.forEach(item => {
-      if (!counterMap[item.counterId]) {
-        counterMap[item.counterId] = [];
+    // ✅ Map menu details to order items
+    const updatedItems = items.map(item => {
+      const menuItem = menuItems.find(menu => menu._id.toString() === item._id);
+      if (!menuItem) {
+        throw new Error(`Menu item with ID ${item._id} not found`);
       }
-      counterMap[item.counterId].push(item);
+      return {
+        foodId: menuItem._id,  // ✅ Assign `_id` from Menu collection to `foodId`
+        quantity: item.quantity,
+        price: menuItem.price,  // ✅ Get price from Menu
+        counterId: menuItem.counterId  // ✅ Get counterId from Menu
+      };
     });
-
-    // ✅ Generate OTPs for each counter
-    const otpArray = Object.keys(counterMap).map(counterId => ({
-      counterId,
-      otpCode: otpGenerator.generate(6, { digits: true, upperCaseAlphabets: false, specialChars: false }) // 6-digit OTP
-    }));
 
     // ✅ Create and save the order
     const newOrder = new Order({
       studentId,
       canteenId,
-      items,
-      otp: otpArray,
+      items: updatedItems,
       status: "Pending"
     });
 
     await newOrder.save();
-    res.status(201).json({ orderId: newOrder._id, otp: otpArray });
+    res.status(201).json({ orderId: newOrder._id, items: updatedItems });
   } catch (error) {
     console.error("Order creation error:", error);
     res.status(500).json({ error: error.message });
@@ -66,7 +63,7 @@ router.get('/order-status/:id', authenticate, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('studentId', 'name email') // Populate student details
-      .populate('items.foodId', 'name price'); // Populate food details
+      .populate('items.foodId', 'name price counterId'); // ✅ Fix: Populate `foodId`, not `_id`
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
@@ -78,10 +75,9 @@ router.get('/order-status/:id', authenticate, async (req, res) => {
       canteenId: order.canteenId,
       items: order.items.map(item => ({
         counterId: item.counterId,
-        foodId: item.foodId,
+        foodId: item.foodId,  // ✅ Ensure `foodId` is populated
         price: item.price
       })),
-      otp: order.otp,
       status: order.status,
       paymentStatus: order.paymentStatus
     });
