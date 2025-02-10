@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');  // Import User model
 const orderRoutes = require('./routes/orderRoutes'); // Import order routes
+const Menu = require('./models/Menu'); // Import Menu model
 
 // Explicitly load .env file from the correct directory
 dotenv.config({ path: path.resolve(__dirname, '.env') });
@@ -52,6 +53,29 @@ const authenticate = (req, res, next) => {
     return res.status(401).json({ message: 'Invalid token' });
   }
 };
+
+/*/ Insert Sample Menu Items (Run Once)
+const insertMenu = async () => {
+  try {
+    const existingMenu = await Menu.countDocuments(); // Check if menu is already populated
+    if (existingMenu === 0) {
+      await Menu.insertMany([
+        { name: "Burger", price: 50, counterId: "counter_1" },
+        { name: "Pizza", price: 120, counterId: "counter_2" },
+        { name: "Pasta", price: 90, counterId: "counter_3" },
+        { name: "Fries", price: 40, counterId: "counter_1" }
+      ]);
+      console.log("Sample menu added!");
+    } else {
+      console.log("Menu already populated.");
+    }
+  } catch (error) {
+    console.error("Error inserting menu:", error);
+  }
+};
+
+// Uncomment the line below, run the server once, then remove it
+insertMenu(); */
 
 // Signup Route (User Registration)
 app.post('/signup', async (req, res) => {
