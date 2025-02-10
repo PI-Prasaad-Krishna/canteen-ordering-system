@@ -1,62 +1,70 @@
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useState } from "react";
 
 function CartPage({ cart, removeFromCart }) {
+  const [loading, setLoading] = useState(false); // State to track if the order is being placed
   const navigate = useNavigate();
 
   const placeOrder = async () => {
+    setLoading(true); // Set loading to true when the order starts
     try {
-      // ✅ Get token from localStorage
+      // Get the token from localStorage
       const token = localStorage.getItem("token");
 
-      // ✅ Check if token exists before making the request
+      // If there's no token, redirect to login page
       if (!token) {
-        console.error("No token found. Please log in.");
-        alert("You need to log in to place an order.");
+        alert("You must be logged in to place an order.");
+        navigate("/login");
         return;
       }
 
+      // Make the API call to place the order
       const response = await axios.post(
-        "http://localhost:5000/api/order",
+        "http://localhost:5000/api/order",  // API endpoint to place the order
         {
           canteenId: "1234",
-          items: cart.map((item) => ({ _id: item._id, quantity: 1 })),
+          items: cart.map((item) => ({ _id: item._id, quantity: 1 })),  // Preparing order data
         },
         {
-          headers: { Authorization: `Bearer ${token}` }, // ✅ Send token in headers
+          headers: { Authorization: `Bearer ${token}` },  // Pass the token in the headers
         }
       );
 
-      navigate(`/order/${response.data.orderId}`); // Redirect to order page
+      // Order placed successfully, navigate to order status page
+      navigate(`/order/${response.data.orderId}`);
+      // Optionally clear the cart after placing the order
+      // clearCart();
     } catch (error) {
       console.error("Error placing order:", error);
       alert("Failed to place order. Please try again.");
+    } finally {
+      setLoading(false); // Reset loading state after the request is finished
     }
   };
 
+  // Optionally clear the cart
+  const clearCart = () => {
+    // Call a function to clear the cart in the parent component
+    // For example: removeFromCart(item._id) can be used to clear the items from the cart.
+  };
+
   return (
-    <div style={{ padding: "20px" }}>
+    <div>
       <h1>Cart</h1>
       {cart.length === 0 ? (
         <p>Your cart is empty.</p>
       ) : (
         <div>
           {cart.map((item) => (
-            <div key={item._id} style={{
-              border: "1px solid #ccc",
-              padding: "10px",
-              margin: "10px 0",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center"
-            }}>
+            <div key={item._id}>
               <h2>{item.name}</h2>
               <p>₹{item.price}</p>
               <button onClick={() => removeFromCart(item._id)}>Remove</button>
             </div>
           ))}
-          <button style={{ width: "100%", marginTop: "10px" }} onClick={placeOrder}>
-            Place Order
+          <button onClick={placeOrder} disabled={loading}>
+            {loading ? "Placing Order..." : "Place Order"}
           </button>
         </div>
       )}

@@ -18,7 +18,7 @@ const UserSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ['student', 'admin'],  // User can be either a student or an admin
-    default: 'student',
+    default: 'student',  // Default to 'student'
   },
 }, { timestamps: true });  // Adds createdAt and updatedAt fields automatically
 
