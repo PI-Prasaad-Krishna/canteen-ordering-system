@@ -1,11 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const dotenv = require('dotenv');
+dotenv = require('dotenv');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('./models/User');  // Import User model
+const orderRoutes = require('./routes/orderRoutes'); // Import order routes
 
 // Explicitly load .env file from the correct directory
 dotenv.config({ path: path.resolve(__dirname, '.env') });
@@ -119,6 +120,9 @@ app.post('/login', async (req, res) => {
 app.get('/protected', authenticate, (req, res) => {
   res.send('You have access to this protected route!');
 });
+
+// Use order routes
+app.use('/api', orderRoutes);
 
 // Default route
 app.get('/', (req, res) => {
