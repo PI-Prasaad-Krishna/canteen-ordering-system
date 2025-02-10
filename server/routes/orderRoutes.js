@@ -1,7 +1,8 @@
 const express = require('express');
 const Order = require('../models/Order'); // Import Order model
 const crypto = require('crypto'); // For OTP generation
-const authenticate = require('../middleware/authenticate'); // Correct path
+const authenticate = require('../middleware/authenticate'); // Authentication middleware
+const otpGenerator = require('otp-generator'); // OTP generator
 
 const router = express.Router();
 
@@ -61,12 +62,42 @@ router.get('/order-status/:id', authenticate, async (req, res) => {
   }
 });
 
+// Generate OTP for order verification
+router.post('/order-status/:id/generate-otp', authenticate, async (req, res) => {
+  try {
+    const { counterId } = req.body; // Counter ID for the OTP generation
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Generate a 6-digit numeric OTP
+    const otpCode = otpGenerator.generate(6, { digits: true, upperCaseAlphabets: false, specialChars: false });
+
+    // Store OTP in the order object for the given counter
+    const otpIndex = order.otp.findIndex(otp => otp.counterId === counterId);
+    if (otpIndex !== -1) {
+      order.otp[otpIndex].otpCode = otpCode; // Update OTP if it already exists
+    } else {
+      order.otp.push({ counterId, otpCode }); // Add new OTP entry if not found
+    }
+
+    await order.save();
+
+    res.status(200).json({ message: 'OTP generated successfully!', otp: otpCode });
+  } catch (error) {
+    console.error('Error generating OTP:', error);
+    res.status(500).json({ message: 'Error generating OTP' });
+  }
+});
+
 // Verify OTP at the counter
-router.post('/verify-otp', authenticate, async (req, res) => {
-  const { orderId, counterId, otpCode } = req.body;
+router.post('/order-status/:id/verify-otp', authenticate, async (req, res) => {
+  const { counterId, otpCode } = req.body;
 
   try {
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(req.params.id);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
