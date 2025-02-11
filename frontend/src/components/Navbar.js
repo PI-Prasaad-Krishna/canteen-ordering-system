@@ -4,6 +4,7 @@ function Navbar({ isAuthenticated, handleLogout }) {
   return (
     <nav>
       <ul>
+        <h1>Welcome!!</h1>
         <li>
           <Link to="/">Home</Link>
         </li>

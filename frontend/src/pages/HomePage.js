@@ -12,7 +12,8 @@ function HomePage({ addToCart }) {
 
   return (
     <div style={{ padding: "20px" }}>
-      <h1>Menu</h1>
+      <h1>CanteenO</h1>
+      <h2>Menu</h2>
       {menu.length === 0 ? <p>Loading menu...</p> : (
         menu.map((item) => (
           <div key={item._id} style={{
