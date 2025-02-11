@@ -13,7 +13,7 @@ function Navbar({ isAuthenticated, handleLogout }) {
         {isAuthenticated ? (
           <>
             <li>
-              <button onClick={handleLogout}>Logout</button>
+              <button onClick={handleLogout}>Login</button>
             </li>
             <li>
               <Link to="/order">Order</Link>
